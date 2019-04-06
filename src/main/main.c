@@ -36,6 +36,8 @@ static const adc_atten_t atten = ADC_ATTEN_DB_11;
 
 static const char *TAG = "glasshouse";
 
+void on_wifi_ready();
+
 /*
  * Homekit characteristics
  */
@@ -161,7 +163,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
         esp_wifi_connect();
         break;
     case SYSTEM_EVENT_STA_GOT_IP:
-        // on_wifi_ready();
+        on_wifi_ready();
         break;
     case SYSTEM_EVENT_STA_DISCONNECTED:
         /* This is a workaround as ESP32 WiFi libs don't currently
@@ -175,7 +177,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
 }
 
 /*
- * Wi-Fi initialization
+ * Wi-Fi setup
  */
 
 static void wifi_init()
@@ -272,6 +274,16 @@ void light_sensor_init()
 }
 
 /*
+ * Initialize Homekit server and sensors
+ */
+
+void on_wifi_ready() {
+    homekit_server_init(&config);
+    soil_moisture_sensor_init();
+    light_sensor_init();
+}
+
+/*
  * App main
  */
 
@@ -295,10 +307,6 @@ void app_main(void)
     adc_chars = calloc(1, sizeof(esp_adc_cal_characteristics_t));
     esp_adc_cal_value_t val_type = esp_adc_cal_characterize(ADC_UNIT_1, atten, ADC_WIDTH_BIT_12, DEFAULT_VREF, adc_chars);
 
-    soil_moisture_sensor_init();
-    light_sensor_init();
-
+    // Wi-Fi initialize
     wifi_init();
-
-    homekit_server_init(&config);
 }
