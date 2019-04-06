@@ -1,5 +1,11 @@
+.vscode
+
+/qrcode.png
+
 build/
 firmware/
+
 sdkconfig
 sdkconfig.old
+
 wifi.h
