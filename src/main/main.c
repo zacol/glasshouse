@@ -26,12 +26,18 @@
 #define DEVICE_MODEL "1"
 #define DEVICE_FIRMWARE_REVISION "0.1"
 
-#define DEFAULT_VREF 1128 // Use adc2_vref_to_gpio() to obtain a better estimate
+#define DEFAULT_VREF 1128
 #define NO_OF_SAMPLES 64  // Multisampling
 
+/* 
+ * Can run 'make menuconfig' to choose the led GPIO and sensors channels,
+ * or you can edit the following line and set a number here.
+ */
+#define LED_GPIO CONFIG_LED_GPIO
+#define SOIL_MOISTURE_CHANNEL CONFIG_SOIL_MOISTURE_CHANNEL
+#define LIGHT_CHANNEL CONFIG_LIGHT_CHANNEL
+
 static esp_adc_cal_characteristics_t *adc_chars;
-static const adc_channel_t gpio34 = ADC_CHANNEL_6;
-static const adc_channel_t gpio35 = ADC_CHANNEL_7;
 static const adc_atten_t atten = ADC_ATTEN_DB_11;
 
 static const char *TAG = "glasshouse";
@@ -55,15 +61,33 @@ homekit_characteristic_t light = HOMEKIT_CHARACTERISTIC_(CURRENT_AMBIENT_LIGHT_L
  * Identify
  */
 
+void led_init() {
+    gpio_set_direction(LED_GPIO, GPIO_MODE_OUTPUT);
+    gpio_set_level(LED_GPIO, 1);
+}
+
 void identify_task(void *_args)
 {
+    for (int i=0; i<3; i++) {
+        for (int j=0; j<2; j++) {
+            gpio_set_level(LED_GPIO, 1);
+            vTaskDelay(100 / portTICK_PERIOD_MS);
+            gpio_set_level(LED_GPIO, 0);
+            vTaskDelay(100 / portTICK_PERIOD_MS);
+        }
+
+        vTaskDelay(250 / portTICK_PERIOD_MS);
+    }
+
+    gpio_set_level(LED_GPIO, 1);
+
     vTaskDelete(NULL);
 }
 
 void identify(homekit_value_t _value)
 {
     printf("Identify\n");
-    // xTaskCreate(identify_task, "identify", 128, NULL, 2, NULL);
+    xTaskCreate(identify_task, "identify", 8000, NULL, 2, NULL);
 }
 
 /*
@@ -216,7 +240,7 @@ void soil_moisture_sensor_task(void *_args)
         // Multisampling
         for (int i = 0; i < NO_OF_SAMPLES; i++)
         {
-            adc_reading += adc1_get_raw((adc1_channel_t)gpio34);
+            adc_reading += adc1_get_raw((adc1_channel_t)SOIL_MOISTURE_CHANNEL);
         }
         adc_reading /= NO_OF_SAMPLES;
 
@@ -251,7 +275,7 @@ void light_sensor_task(void *_args)
         // Multisampling
         for (int i = 0; i < NO_OF_SAMPLES; i++)
         {
-            adc_reading += adc1_get_raw((adc1_channel_t)gpio35);
+            adc_reading += adc1_get_raw((adc1_channel_t)LIGHT_CHANNEL);
         }
         adc_reading /= NO_OF_SAMPLES;
 
@@ -300,13 +324,16 @@ void app_main(void)
 
     // Configure ADC
     adc1_config_width(ADC_WIDTH_BIT_12);
-    adc1_config_channel_atten(gpio34, atten);
-    adc1_config_channel_atten(gpio35, atten);
+    adc1_config_channel_atten(SOIL_MOISTURE_CHANNEL, atten);
+    adc1_config_channel_atten(LIGHT_CHANNEL, atten);
 
     // Characterize ADC
     adc_chars = calloc(1, sizeof(esp_adc_cal_characteristics_t));
-    esp_adc_cal_value_t val_type = esp_adc_cal_characterize(ADC_UNIT_1, atten, ADC_WIDTH_BIT_12, DEFAULT_VREF, adc_chars);
+    esp_adc_cal_characterize(ADC_UNIT_1, atten, ADC_WIDTH_BIT_12, DEFAULT_VREF, adc_chars);
 
     // Wi-Fi initialize
     wifi_init();
+
+    // Led initialize
+    led_init();
 }

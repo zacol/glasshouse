@@ -1,0 +1,72 @@
+menu "Example Configuration"
+
+    config LED_GPIO
+        int "Led GPIO number"
+        range 0 34
+        default 5
+        help
+            GPIO number (IOxx) for led status indicator.
+
+            GPIOs 0 - 34 can be used as input or output pins. 
+            
+            0V (low) and 3.3V (high).
+
+    choice SOIL_MOISTURE_CHANNEL
+        bool "ADC1 Soil Moisture Sensor"
+        default ADC1_SOIL_MOISTURE_CHANNEL_6
+        help
+            ADC1 channel number for soil moisture sensor
+
+        config ADC1_SOIL_MOISTURE_CHANNEL_0
+            bool "ADC1 Channel 0 (GPIO 36)"
+        config ADC1_SOIL_MOISTURE_CHANNEL_3
+            bool "ADC1 Channel 3 (GPIO 39)"
+        config ADC1_SOIL_MOISTURE_CHANNEL_4
+            bool "ADC1 Channel 4 (GPIO 32)"
+        config ADC1_SOIL_MOISTURE_CHANNEL_5
+            bool "ADC1 Channel 5 (GPIO 33)"
+        config ADC1_SOIL_MOISTURE_CHANNEL_6
+            bool "ADC1 Channel 6 (GPIO 34)"
+        config ADC1_SOIL_MOISTURE_CHANNEL_7
+            bool "ADC1 Channel 7 (GPIO 35)"
+    endchoice
+
+    config SOIL_MOISTURE_CHANNEL
+        int
+        default 0 if ADC1_SOIL_MOISTURE_CHANNEL_0
+        default 3 if ADC1_SOIL_MOISTURE_CHANNEL_3
+        default 4 if ADC1_SOIL_MOISTURE_CHANNEL_4
+        default 5 if ADC1_SOIL_MOISTURE_CHANNEL_5
+        default 6 if ADC1_SOIL_MOISTURE_CHANNEL_6
+        default 7 if ADC1_SOIL_MOISTURE_CHANNEL_7
+    
+    choice LIGHT_CHANNEL
+        bool "ADC1 Light Sensor"
+        default ADC1_LIGHT_CHANNEL_7
+        help
+            ADC1 channel number for light sensor
+
+        config ADC1_LIGHT_CHANNEL_0
+            bool "ADC1 Channel 0 (GPIO 36)"
+        config ADC1_LIGHT_CHANNEL_3
+            bool "ADC1 Channel 3 (GPIO 39)"
+        config ADC1_LIGHT_CHANNEL_4
+            bool "ADC1 Channel 4 (GPIO 32)"
+        config ADC1_LIGHT_CHANNEL_5
+            bool "ADC1 Channel 5 (GPIO 33)"
+        config ADC1_LIGHT_CHANNEL_6
+            bool "ADC1 Channel 6 (GPIO 34)"
+        config ADC1_LIGHT_CHANNEL_7
+            bool "ADC1 Channel 7 (GPIO 35)"
+    endchoice
+
+    config LIGHT_CHANNEL
+        int
+        default 0 if ADC1_LIGHT_CHANNEL_0
+        default 3 if ADC1_LIGHT_CHANNEL_3
+        default 4 if ADC1_LIGHT_CHANNEL_4
+        default 5 if ADC1_LIGHT_CHANNEL_5
+        default 6 if ADC1_LIGHT_CHANNEL_6
+        default 7 if ADC1_LIGHT_CHANNEL_7
+    
+endmenu
