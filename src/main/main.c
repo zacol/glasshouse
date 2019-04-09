@@ -29,6 +29,9 @@
 #define DEFAULT_VREF 1128
 #define NO_OF_SAMPLES 64  // Multisampling
 
+#define DRY_VALUE 4095
+#define WET_VALUE 1128
+
 /* 
  * Can run 'make menuconfig' to choose the led GPIO and sensors channels,
  * or you can edit the following line and set a number here.
@@ -247,11 +250,19 @@ void soil_moisture_sensor_task(void *_args)
         // Convert adc_reading to voltage in mV
         int voltage = esp_adc_cal_raw_to_voltage(adc_reading, adc_chars);
 
-        printf("Soil moisture\tRaw: %d\tVoltage: %dmV\n", adc_reading, voltage);
+        // Convert adc_reading to percentage value
+        float per_percent = (DRY_VALUE - WET_VALUE) / 100;
+        float percentage = (adc_reading - WET_VALUE) / per_percent;
 
-        soil_moisture.value.float_value = 10.00;
+        percentage = 100 - percentage;
+        percentage = percentage < 0 ? 0 : percentage;
+        percentage = percentage > 100 ? 100 : percentage;
 
-        homekit_characteristic_notify(&soil_moisture, HOMEKIT_FLOAT(10.00));
+        printf("Soil moisture\tRaw: %d\tVoltage: %dmV\tPercentage: %f\n", adc_reading, voltage, percentage);
+
+        soil_moisture.value.float_value = percentage;
+
+        homekit_characteristic_notify(&soil_moisture, HOMEKIT_FLOAT(percentage));
 
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
@@ -282,11 +293,14 @@ void light_sensor_task(void *_args)
         // Convert adc_reading to voltage in mV
         int voltage = esp_adc_cal_raw_to_voltage(adc_reading, adc_chars);
 
+        // Convert adc_reading to lux value - how to do that?
+        float lux = adc_reading;
+
         printf("Light\t\tRaw: %d\tVoltage: %dmV\n", adc_reading, voltage);
 
-        light.value.float_value = 20.00;
+        light.value.float_value = lux;
 
-        homekit_characteristic_notify(&light, HOMEKIT_FLOAT(20.00));
+        homekit_characteristic_notify(&light, HOMEKIT_FLOAT(lux));
 
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
@@ -303,6 +317,9 @@ void light_sensor_init()
 
 void on_wifi_ready() {
     homekit_server_init(&config);
+
+    vTaskDelay(pdMS_TO_TICKS(1000));
+    
     soil_moisture_sensor_init();
     light_sensor_init();
 }
