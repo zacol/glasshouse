@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 
 #include <esp_wifi.h>
 #include <esp_event_loop.h>
@@ -31,6 +32,9 @@
 
 #define DRY_VALUE 4095
 #define WET_VALUE 1128
+
+#define RAW_RANGE 4095
+#define LOG_RANGE 5.0
 
 /* 
  * Can run 'make menuconfig' to choose the led GPIO and sensors channels,
@@ -258,7 +262,7 @@ void soil_moisture_sensor_task(void *_args)
         percentage = percentage < 0 ? 0 : percentage;
         percentage = percentage > 100 ? 100 : percentage;
 
-        printf("Soil moisture\tRaw: %d\tVoltage: %dmV\tPercentage: %f\n", adc_reading, voltage, percentage);
+        printf("Soil moisture\tRaw: %d\tVoltage: %dmV\tPercentage: %.2f\n", adc_reading, voltage, percentage);
 
         soil_moisture.value.float_value = percentage;
 
@@ -293,10 +297,11 @@ void light_sensor_task(void *_args)
         // Convert adc_reading to voltage in mV
         int voltage = esp_adc_cal_raw_to_voltage(adc_reading, adc_chars);
 
-        // Convert adc_reading to lux value - how to do that?
-        float lux = adc_reading;
+        // Convert adc_reading to lux value
+        float lux = adc_reading * LOG_RANGE / RAW_RANGE;
+        lux = powf(10, lux);
 
-        printf("Light\t\tRaw: %d\tVoltage: %dmV\n", adc_reading, voltage);
+        printf("Light\t\tRaw: %d\tVoltage: %dmV\tLux: %.2f\n", adc_reading, voltage, lux);
 
         light.value.float_value = lux;
 
