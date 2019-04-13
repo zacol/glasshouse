@@ -10,6 +10,17 @@ menu "Example Configuration"
             GPIOs 0 - 34 can be used as input or output pins. 
             
             0V (low) and 3.3V (high).
+    
+    config DHT_GPIO
+        int "DHT GPIO number"
+        range 0 34
+        default 32
+        help
+            GPIO number (IOxx) for DHT22 sensor.
+
+            GPIOs 0 - 34 can be used as input or output pins. 
+            
+            0V (low) and 3.3V (high).
 
     choice SOIL_MOISTURE_CHANNEL
         bool "ADC1 Soil Moisture Sensor"

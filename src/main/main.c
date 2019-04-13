@@ -20,6 +20,7 @@
 #include "driver/gpio.h"
 #include "driver/adc.h"
 #include "esp_adc_cal.h"
+#include "DHT22.h"
 
 #define DEVICE_NAME "Glasshouse Station"
 #define DEVICE_MANUFACTURER "Jacek Spławski"
@@ -41,6 +42,7 @@
  * or you can edit the following line and set a number here.
  */
 #define LED_GPIO CONFIG_LED_GPIO
+#define DHT_GPIO CONFIG_DHT_GPIO
 #define SOIL_MOISTURE_CHANNEL CONFIG_SOIL_MOISTURE_CHANNEL
 #define LIGHT_CHANNEL CONFIG_LIGHT_CHANNEL
 
@@ -63,6 +65,8 @@ homekit_characteristic_t revision = HOMEKIT_CHARACTERISTIC_(FIRMWARE_REVISION, D
 
 homekit_characteristic_t soil_moisture = HOMEKIT_CHARACTERISTIC_(CURRENT_RELATIVE_HUMIDITY, 0);
 homekit_characteristic_t light = HOMEKIT_CHARACTERISTIC_(CURRENT_AMBIENT_LIGHT_LEVEL, 0);
+homekit_characteristic_t air_temperature = HOMEKIT_CHARACTERISTIC_(CURRENT_TEMPERATURE, 0);
+homekit_characteristic_t air_humidity = HOMEKIT_CHARACTERISTIC_(CURRENT_RELATIVE_HUMIDITY, 0);
 
 /*
  * Identify
@@ -135,7 +139,25 @@ homekit_accessory_t *accessories[] = {
                     &light, 
                     NULL
                 }
-            ), 
+            ),
+            HOMEKIT_SERVICE(
+                TEMPERATURE_SENSOR, 
+                .primary=true, 
+                .characteristics=(homekit_characteristic_t*[]){
+                    HOMEKIT_CHARACTERISTIC(NAME, "Temperature Sensor"),
+                    &air_temperature,
+                    NULL
+                }
+            ),
+            HOMEKIT_SERVICE(
+                HUMIDITY_SENSOR, 
+                .primary=true, 
+                .characteristics=(homekit_characteristic_t*[]){
+                    HOMEKIT_CHARACTERISTIC(NAME, "Humidity Sensor"),
+                    &air_humidity,
+                    NULL
+                }
+            ),
             NULL
         }
     ),
@@ -268,7 +290,7 @@ void soil_moisture_sensor_task(void *_args)
 
         homekit_characteristic_notify(&soil_moisture, HOMEKIT_FLOAT(percentage));
 
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        vTaskDelay(3000 / portTICK_RATE_MS);
     }
 }
 
@@ -307,7 +329,7 @@ void light_sensor_task(void *_args)
 
         homekit_characteristic_notify(&light, HOMEKIT_FLOAT(lux));
 
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        vTaskDelay(3000 / portTICK_RATE_MS);
     }
 }
 
@@ -315,6 +337,38 @@ void light_sensor_init()
 {
     xTaskCreate(light_sensor_task, "Light", 8000, NULL, 2, NULL);
 }
+
+void temperature_sensor_task(void *pvParameter)
+{
+	setDHTgpio(DHT_GPIO);
+
+	while(1) {
+		int ret = readDHT();
+		
+		errorHandler(ret);
+
+        float air_temperature_value = getTemperature();
+        float air_humidity_value = getHumidity();
+
+        printf("Temperature\tRaw: -\t\tVoltage: -\tCelsius: %.2f\n", air_temperature_value);
+        printf("Humidity\tRaw: -\t\tVoltage: -\tPercentage: %.2f\n", air_humidity_value);
+
+        air_temperature.value.float_value = air_temperature_value;
+        air_humidity.value.float_value = air_humidity_value;
+
+        homekit_characteristic_notify(&air_temperature, HOMEKIT_FLOAT(air_temperature_value));
+        homekit_characteristic_notify(&air_humidity, HOMEKIT_FLOAT(air_humidity_value));
+		
+		// Wait at least 2 seconds before reading again
+        // DHT22 sensor is quite slow
+		vTaskDelay(3000 / portTICK_RATE_MS);
+	}
+}
+
+void temperature_sensor_init() {
+    xTaskCreate(temperature_sensor_task, "Temperatore Sensor", 2048, NULL, 2, NULL);
+}
+
 
 /*
  * Initialize Homekit server and sensors
@@ -327,6 +381,7 @@ void on_wifi_ready() {
     
     soil_moisture_sensor_init();
     light_sensor_init();
+    temperature_sensor_init();
 }
 
 /*
